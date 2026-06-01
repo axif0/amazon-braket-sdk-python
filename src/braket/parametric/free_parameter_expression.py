@@ -24,6 +24,31 @@ from oqpy.base import OQPyExpression
 from oqpy.classical_types import FloatVar
 
 
+class _OpenQASMPrinter(sympy.printing.StrPrinter):
+    _FN_MAP = {
+        sympy.sin: "sin",
+        sympy.cos: "cos",
+        sympy.tan: "tan",
+        sympy.asin: "arcsin",
+        sympy.acos: "arccos",
+        sympy.atan: "arctan",
+        sympy.exp: "exp",
+        sympy.log: "log",
+        sympy.sqrt: "sqrt",
+        sympy.Mod: "mod",
+        sympy.ceiling: "ceiling",
+        sympy.floor: "floor",
+    }
+
+    def _print_Function(self, expr):
+        fn_type = type(expr)
+        if fn_type not in self._FN_MAP:
+            raise ValueError(f"No OpenQASM 3 equivalent for {fn_type.__name__}")
+        name = self._FN_MAP[fn_type]
+        args = ", ".join(self._print(a) for a in expr.args)
+        return f"{name}({args})"
+
+
 class FreeParameterExpression:
     """Class 'FreeParameterExpression'
 
@@ -49,13 +74,35 @@ class FreeParameterExpression:
         Examples:
             >>> expression_1 = FreeParameter("theta") * FreeParameter("alpha")
             >>> expression_2 = 1 + FreeParameter("beta") + 2 * FreeParameter("alpha")
+            >>> # Math-function helpers (preferred):
+            >>> from braket.parametric import sin, cos, arcsin
+            >>> x = FreeParameter("alpha")
+            >>> expression_3 = sin(x / 2) ** 2 + cos(x / 2) ** 2
+            >>> # String form – function calls are supported:
+            >>> expression_4 = FreeParameterExpression("arcsin(alpha)")
         """
         self._operations = {
             ast.Add: self.__add__,
             ast.Sub: self.__sub__,
             ast.Mult: self.__mul__,
+            ast.Div: self.__truediv__,
             ast.Pow: self.__pow__,
             ast.USub: self.__neg__,
+        }
+        # Maps names used in string expressions to the corresponding sympy functions
+        self._str_fn_map = {
+            "sin": sympy.sin,
+            "cos": sympy.cos,
+            "tan": sympy.tan,
+            "arcsin": sympy.asin,
+            "arccos": sympy.acos,
+            "arctan": sympy.atan,
+            "exp": sympy.exp,
+            "log": sympy.log,
+            "sqrt": sympy.sqrt,
+            "mod": sympy.Mod,
+            "ceiling": sympy.ceiling,
+            "floor": sympy.floor,
         }
         if isinstance(expression, FreeParameterExpression):
             self._expression = expression.expression
@@ -123,6 +170,18 @@ class FreeParameterExpression:
             if type(node.op) not in self._operations:
                 raise ValueError(f"Unsupported unary operation: {type(node.op)}", type(node.op))
             return self._eval_operation(node.operand)._operations[type(node.op)]()
+        if isinstance(node, ast.Call):
+            if not isinstance(node.func, ast.Name):
+                raise ValueError(f"Unsupported call target: {node.func}")
+            fn_name = node.func.id
+            if fn_name not in self._str_fn_map:
+                raise ValueError(
+                    f"Unknown function '{fn_name}' in expression string. "
+                    f"Supported functions: {sorted(self._str_fn_map)}"
+                )
+            sympy_fn = self._str_fn_map[fn_name]
+            args = [self._eval_operation(a).expression for a in node.args]
+            return FreeParameterExpression(sympy_fn(*args))
         raise ValueError(f"Unsupported string detected: {node}")
 
     def __add__(self, other: FreeParameterExpression):
@@ -179,7 +238,15 @@ class FreeParameterExpression:
         Returns:
             str: The expression of the class:'FreeParameterExpression' to represent the class.
         """
-        return repr(self.expression)
+        return _OpenQASMPrinter().doprint(self.expression)
+
+    def __str__(self) -> str:
+        """The string representation of the :class:'FreeParameterExpression'.
+
+        Returns:
+            str: The string representation of the expression.
+        """
+        return _OpenQASMPrinter().doprint(self.expression)
 
     def _to_oqpy_expression(self) -> OQPyExpression:
         """Transforms into an OQPyExpression.

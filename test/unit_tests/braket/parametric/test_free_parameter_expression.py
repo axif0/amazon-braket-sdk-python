@@ -52,9 +52,16 @@ def test_equality_str():
     assert hasattr(expr_1.expression, "free_symbols") and hasattr(expr_2.expression, "free_symbols")
 
 
-@pytest.mark.xfail(raises=ValueError)
-def test_unsupported_bin_op_str():
-    FreeParameterExpression("theta/1")
+def test_div_bin_op_str():
+    # Division in string expressions is now supported (ast.Div added to _operations).
+    expr = FreeParameterExpression("theta/1")
+    assert str(expr) == "theta"
+
+
+def test_string_function_call_parsing():
+    expr = FreeParameterExpression("sin(theta) + 1")
+    assert str(expr) == "sin(theta) + 1"
+    assert expr.subs({"theta": 0}) == 1.0
 
 
 @pytest.mark.xfail(raises=ValueError)

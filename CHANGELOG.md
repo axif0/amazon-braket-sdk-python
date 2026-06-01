@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.118.0 (2026-06-01)
+
+### Features
+
+ * `braket.parametric` now exports module-level math-function helpers:
+   `sin`, `cos`, `tan`, `arcsin`, `arccos`, `arctan`, `exp`, `log`,
+   `sqrt`, `mod`, `ceiling`, `floor`. Each helper accepts a
+   `FreeParameterExpression`, `FreeParameter`, or plain number and
+   returns a `FreeParameterExpression`.
+ * `FreeParameterExpression.__str__` / `__repr__` now use an
+   OpenQASM 3-aware printer (`_OpenQASMPrinter`) so that inverse-trig
+   functions serialize correctly (`arcsin`, `arccos`, `arctan`) and
+   `mod` is lowercased to match the spec. Unsupported sympy functions
+   (e.g. `Abs`) now raise a clear `ValueError` instead of silently
+   emitting invalid QASM.
+ * The string constructor for `FreeParameterExpression` now accepts
+   function-call expressions (e.g. `"arcsin(alpha)"`, `"mod(x, 2)"`)
+   and division (`"alpha/2"`).
+
 ## v1.117.3 (2026-05-14)
 
 ### Bug Fixes and Other Changes
