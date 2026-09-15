@@ -13,34 +13,43 @@
 
 from __future__ import annotations
 
+import threading
+
 
 class TrackingContext:
     def __init__(self):
         self._trackers = set()
+        self._lock = threading.Lock()
 
-    def register_tracker(self, tracker: Tracker) -> None:  # noqa: F821
+    def register_tracker(self, tracker: Tracker) -> None:  # ruff:ignore[undefined-name]
         """Registers a tracker.
 
         Args:
             tracker (Tracker): The tracker.
         """
-        self._trackers.add(tracker)
+        with self._lock:
+            self._trackers.add(tracker)
 
-    def deregister_tracker(self, tracker: Tracker) -> None:  # noqa: F821
+    def deregister_tracker(self, tracker: Tracker) -> None:  # ruff:ignore[undefined-name]
         """Deregisters a tracker.
 
         Args:
             tracker (Tracker): The tracker.
         """
-        self._trackers.remove(tracker)
+        with self._lock:
+            self._trackers.remove(tracker)
 
-    def broadcast_event(self, event: _TrackingEvent) -> None:  # noqa: F821
+    def broadcast_event(self, event: _TrackingEvent) -> None:  # ruff:ignore[undefined-name]
         """Broadcasts an event to all trackers.
 
         Args:
             event (_TrackingEvent): The event to broadcast.
         """
-        for tracker in self._trackers:
+        # Iterate over a snapshot so that trackers registering or deregistering
+        # concurrently (or from receive_event) cannot mutate the set mid-iteration.
+        with self._lock:
+            trackers = list(self._trackers)
+        for tracker in trackers:
             tracker.receive_event(event)
 
     def active_trackers(self) -> set:

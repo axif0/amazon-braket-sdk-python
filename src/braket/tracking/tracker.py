@@ -50,7 +50,7 @@ class Tracker:
         Returns:
             Tracker: self.
         """
-        return self.__enter__()  # noqa: PLC2801
+        return self.__enter__()  # ruff:ignore[unnecessary-dunder-call]
 
     def stop(self) -> Tracker:
         """Stop tracking resources with this tracker.
@@ -266,9 +266,6 @@ def _get_simulator_task_cost(task_arn: str, details: dict) -> Decimal:
     else:
         product_family = "Simulator Task"
         operation = "CompleteTask"
-        if details["status"] == "FAILED" and device_name == "TN1":
-            # Rehearsal step of TN1 can fail and charges still apply.
-            operation = "FailedTask"
 
     search_dict = {
         "Region Code": task_region,

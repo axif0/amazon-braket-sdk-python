@@ -9,6 +9,9 @@
 
 The Amazon Braket Python SDK is an open source library that provides a framework that you can use to interact with quantum computing hardware devices through Amazon Braket.
 
+## Quick reference
+For a one-page overview of common Amazon Braket SDK calls, see the [Amazon Braket SDK cheat sheet](https://amazon-braket.github.io/amazon-braket-sdk-python/).
+
 ## Prerequisites
 Before you begin working with the Amazon Braket SDK, make sure that you've installed or configured the following prerequisites.
 
@@ -96,7 +99,7 @@ Many quantum algorithms need to run multiple independent circuits, and submittin
 circuits = [bell for _ in range(5)]
 batch = device.run_batch(circuits, shots=100)
 # The result of the first quantum task in the batch
-print(batch.results()[0].measurement_counts)  
+print(batch.results()[0].measurement_counts)
 ```
 
 ### Running a hybrid job
@@ -106,16 +109,17 @@ from braket.aws import AwsQuantumJob
 
 job = AwsQuantumJob.create(
     device="arn:aws:braket:::device/quantum-simulator/amazon/sv1",
-    source_module="job.py",
-    entry_point="job:run_job",
+    source_module="examples/hybrid_job_script.py",
+    entry_point="hybrid_job_script:run_hybrid_job",
+    hyperparameters={"num_tasks": 5},
     wait_until_complete=True,
 )
 print(job.result())
 ```
-where `run_job` is a function in the file `job.py`.
+where `run_hybrid_job` is a function in `examples/hybrid_job_script.py`.
 
 
-The code sample imports the Amazon Braket framework, then creates a hybrid job with the entry point being the `run_job` function. The hybrid job creates quantum tasks against the SV1 AWS Simulator. The hybrid job runs synchronously, and prints logs until it completes. The complete example can be found in `../examples/job.py`.
+The code sample imports the Amazon Braket framework, then creates a hybrid job with the entry point being the `run_hybrid_job` function. The hybrid job creates quantum tasks against the SV1 AWS Simulator. The hybrid job runs synchronously, and prints logs until it completes. The complete example can be found in [`examples/hybrid_job_script.py`](examples/hybrid_job_script.py).
 
 ### Available Simulators
 Amazon Braket provides access to two types of simulators: fully managed simulators, available through the Amazon Braket service, and the local simulators that are part of the Amazon Braket SDK.

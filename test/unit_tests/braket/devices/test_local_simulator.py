@@ -20,6 +20,7 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+import sympy
 from pydantic.v1 import create_model  # This is temporary for defining properties below
 
 import braket.ir as ir
@@ -27,9 +28,10 @@ from braket.ahs.analog_hamiltonian_simulation import AnalogHamiltonianSimulation
 from braket.ahs.atom_arrangement import AtomArrangement
 from braket.ahs.hamiltonian import Hamiltonian
 from braket.annealing import Problem, ProblemType
-from braket.circuits import Circuit, FreeParameter, Gate, Noise
+from braket.circuits import Circuit, FreeParameter, FreeParameterExpression, Gate, Noise
 from braket.circuits.noise_model import GateCriteria, NoiseModel, NoiseModelInstruction
 from braket.circuits.serialization import IRType, SerializableProgram
+from braket.default_simulator import StateVectorSimulator
 from braket.device_schema import DeviceActionType, DeviceCapabilities
 from braket.device_schema.openqasm_device_action_properties import (
     OpenQASMDeviceActionProperties,
@@ -37,6 +39,7 @@ from braket.device_schema.openqasm_device_action_properties import (
 from braket.devices import LocalSimulator, local_simulator
 from braket.ir.openqasm import Program
 from braket.ir.openqasm.program_set_v1 import ProgramSet as OpenQASMProgramSet
+from braket.parametric import cos, sin
 from braket.program_sets import ProgramSet
 from braket.program_sets.circuit_binding import CircuitBinding
 from braket.simulator import BraketSimulator
@@ -589,6 +592,15 @@ def test_batch_with_max_parallel():
         assert x == GateModelQuantumTaskResult.from_object(GATE_MODEL_RESULT)
 
 
+def test_batch_with_shot_sequence_not_implemented():
+    dummy = DummyProgramSimulator()
+    task = Circuit().h(0).cnot(0, 1)
+    device = LocalSimulator(dummy)
+
+    with pytest.raises(NotImplementedError, match="per-task shots"):
+        device.run_batch([task, task], shots=[10, 20])
+
+
 def test_batch_with_annealing_problems():
     dummy = DummyAnnealingSimulator()
     problem = Problem(ProblemType.ISING)
@@ -689,13 +701,35 @@ def test_run_program_model_inputs():
     assert task.result() == GateModelQuantumTaskResult.from_object(GATE_MODEL_RESULT)
 
 
-def test_run_jaqcd_only():
+def test_local_simulator_runs_sympy_inverse_trig_free_parameter_expression():
+    alpha = FreeParameter("alpha")
+    expr = FreeParameterExpression(sympy.asin(alpha.expression))
+    circuit = Circuit().rx(0, expr).measure(0)
+
+    assert "arcsin(alpha)" in circuit.to_ir("OPENQASM").source
+
+    device = LocalSimulator(StateVectorSimulator())
+    result = device.run(circuit, inputs={"alpha": 0.5}, shots=10).result()
+
+    assert sum(result.measurement_counts.values()) == 10
+
+
+def test_local_simulator_runs_parametric_math_helper_expression():
+    alpha = FreeParameter("alpha")
+    expr = sin(alpha / 2) ** 2 + cos(alpha / 2) ** 2
+    circuit = Circuit().rx(0, expr).measure(0)
+
+    device = LocalSimulator(StateVectorSimulator())
+    result = device.run(circuit, inputs={"alpha": math.pi}, shots=10).result()
+
+    assert sum(result.measurement_counts.values()) == 10
+
+
+def test_run_jaqcd_only_raises():
     dummy = DummyJaqcdSimulator()
     sim = LocalSimulator(dummy)
-    task = sim.run(Circuit().h(0).cnot(0, 1), 10)
-    dummy.assert_shots(10)
-    dummy.assert_qubits(None)
-    assert task.result() == GateModelQuantumTaskResult.from_object(GATE_MODEL_RESULT)
+    with pytest.raises(NotImplementedError, match="does not support qubit gate-based programs"):
+        sim.run(Circuit().h(0).cnot(0, 1), 10)
 
 
 def test_run_program_model():
@@ -884,6 +918,22 @@ def test_run_batch_with_noise_model(mock_run_multiple, noise_model):
     with patch.object(device._noise_model, "apply", wraps=device._noise_model.apply) as mock_apply:
         _ = device.run_batch([circuit] * 2, shots=4).results()
         assert mock_apply.call_count == 2
+
+
+@patch.object(DummyProgramDensityMatrixSimulator, "run_multiple")
+def test_run_batch_single_circuit_with_noise_model(mock_run_multiple, noise_model):
+    mock_run_multiple.return_value = [GATE_MODEL_RESULT]
+    device = LocalSimulator("dummy_oq3_dm", noise_model=noise_model)
+    circuit = Circuit().h(0).cnot(0, 1)
+
+    with patch.object(device._noise_model, "apply", wraps=device._noise_model.apply) as mock_apply:
+        results = device.run_batch(circuit, shots=4).results()
+
+    assert len(results) == 1
+    mock_apply.assert_called_once_with(circuit)
+    payloads = mock_run_multiple.call_args.args[0]
+    assert len(payloads) == 1
+    assert "#pragma braket noise bit_flip(0.05) q[0]" in payloads[0].source
 
 
 @patch.object(DummyProgramDensityMatrixSimulator, "run")

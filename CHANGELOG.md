@@ -1,5 +1,135 @@
 # Changelog
 
+## v1.127.0 (2026-09-02)
+
+### Features
+
+ * Allow `Program`s and OpenQASM strings in `ProgramSet`
+
+### Documentation Changes
+
+ * fix hybrid job example reference
+
+## v1.126.2 (2026-08-31)
+
+### Bug Fixes and Other Changes
+
+ * treat scalar observables as one observable
+ * honor HTTP(S)_PROXY when fetching the price list
+ * support single circuits with noise in run_batch
+ * make TrackingContext thread-safe
+
+## v1.126.1 (2026-08-28)
+
+### Bug Fixes and Other Changes
+
+ * handle IPython 9.17.0 initialization pattern
+
+## v1.126.0 (2026-08-24)
+
+### Features
+
+ * add outputs to GateModelQuantumTaskResult
+
+### Documentation Changes
+
+ * add llms.txt generation
+
+## v1.125.0 (2026-08-03)
+
+### Features
+
+ * Per-task shots in `run_batch`
+
+### Bug Fixes and Other Changes
+
+ * parse function calls in FreeParameterExpression
+ * remove redundant sign
+
+## v1.124.3 (2026-07-28)
+
+### Bug Fixes and Other Changes
+
+ * default emulator to None shots
+
+## v1.124.2 (2026-07-27)
+
+### Bug Fixes and Other Changes
+
+ * drop Python 3.9 shim
+
+## v1.124.1 (2026-07-23)
+
+### Bug Fixes and Other Changes
+
+ * Format with new ruff rules
+
+## v1.124.0 (2026-07-14)
+
+### Features
+
+ * count circuit operation on circuit or given qubits
+
+## v1.123.0.post0 (2026-07-13)
+
+### Documentation Changes
+
+ * add cheat sheet links
+
+## v1.123.0 (2026-07-10)
+
+### Features
+
+ * Add `properties` to `Device` and `Emulator`
+
+## v1.122.0 (2026-07-08)
+
+### Features
+
+ * Allow OpenQASM strings in `CircuitBinding`
+
+## v1.121.0 (2026-06-26)
+
+### Deprecations and Removals
+
+ * tn1 retirement
+
+### Bug Fixes and Other Changes
+
+ * task cancellation from non-main thread
+
+## v1.120.0 (2026-06-22)
+
+### Features
+
+ * Add `PauliSum` container
+ * Split program sets
+ * complete the Braket SDK cheat sheet with verified snippets
+
+## v1.119.1 (2026-06-10)
+
+### Bug Fixes and Other Changes
+
+ * support division in FreeParameterExpression string constructor
+
+## v1.119.0 (2026-06-09)
+
+### Features
+
+ * support math functions in FreeParameterExpression
+
+## v1.118.0 (2026-06-04)
+
+### Deprecations and Removals
+
+ * `Circuit.to_ir` default to OpenQASM, warn on JAQCD
+
+## v1.117.4 (2026-06-03)
+
+### Bug Fixes and Other Changes
+
+ * raise DiscretizationError when rydbergLocal params missing
+
 ## v1.117.3 (2026-05-14)
 
 ### Bug Fixes and Other Changes

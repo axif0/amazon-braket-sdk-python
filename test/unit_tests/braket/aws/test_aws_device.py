@@ -32,7 +32,6 @@ from common_test_utils import (
     RIGETTI_ARN,
     RIGETTI_REGION,
     SV1_ARN,
-    TN1_ARN,
     run_and_assert,
     run_batch_and_assert,
 )
@@ -977,7 +976,7 @@ def test_device_simulator_not_found():
             "Error": {
                 "Code": "ResourceNotFoundException",
                 "Message": (
-                    "Braket device 'arn:aws:braket:::device/quantum-simulator/amazon/tn1' "
+                    "Braket device 'arn:aws:braket:::device/quantum-simulator/amazon/dm1' "
                     "not found in us-west-1. You can find a list of all supported device "
                     "ARNs and the regions in which they are available in the documentation: "
                     "https://docs.aws.amazon.com/braket/latest/developerguide/braket-devices.html"
@@ -1001,7 +1000,7 @@ def test_device_qpu_not_found(mock_copy_session):
             "Error": {
                 "Code": "ResourceNotFoundException",
                 "Message": (
-                    "Braket device 'arn:aws:braket:::device/quantum-simulator/amazon/tn1' "
+                    "Braket device 'arn:aws:braket:::device/quantum-simulator/amazon/dm1' "
                     "not found in us-west-1. You can find a list of all supported device "
                     "ARNs and the regions in which they are available in the documentation: "
                     "https://docs.aws.amazon.com/braket/latest/developerguide/braket-devices.html"
@@ -1025,7 +1024,7 @@ def test_device_qpu_exception(mock_copy_session):
                 "Error": {
                     "Code": "ResourceNotFoundException",
                     "Message": (
-                        "Braket device 'arn:aws:braket:::device/quantum-simulator/amazon/tn1' "
+                        "Braket device 'arn:aws:braket:::device/quantum-simulator/amazon/dm1' "
                         "not found in us-west-1. You can find a list of all supported device "
                         "ARNs and the regions in which they are available in the documentation: "
                         "https://docs.aws.amazon.com/braket/latest/developerguide/braket-"
@@ -1613,6 +1612,29 @@ def test_run_batch_with_shots(
 @patch("braket.aws.aws_session.boto3.Session")
 @patch("braket.aws.aws_session.AwsSession")
 @patch("braket.aws.aws_quantum_task.AwsQuantumTask.create")
+def test_run_batch_with_shot_sequence(
+    aws_quantum_task_mock,
+    aws_session_mock,
+    boto_session_mock,
+    device,
+):
+    task_mock = Mock()
+    task_mock.state.return_value = "COMPLETED"
+    aws_quantum_task_mock.return_value = task_mock
+
+    shots = [10, 20, 30]
+    device("arn:aws:braket:::device/quantum-simulator/amazon/sim").run_batch(
+        [Circuit().h(0), Circuit().x(0), Circuit().y(0)],
+        shots=shots,
+        max_parallel=1,
+    )
+
+    assert [call.args[4] for call in aws_quantum_task_mock.call_args_list] == shots
+
+
+@patch("braket.aws.aws_session.boto3.Session")
+@patch("braket.aws.aws_session.AwsSession")
+@patch("braket.aws.aws_quantum_task.AwsQuantumTask.create")
 def test_run_batch_with_max_parallel_and_kwargs(
     aws_quantum_task_mock,
     aws_session_mock,
@@ -1851,7 +1873,7 @@ def test_get_devices_simulators_only(mock_copy_session, aws_session):
     session_for_region.get_device.side_effect = ValueError("should not be reachable")
     mock_copy_session.return_value = session_for_region
     results = AwsDevice.get_devices(
-        arns=[SV1_ARN, TN1_ARN],
+        arns=[SV1_ARN, DM1_ARN],
         types=["SIMULATOR"],
         provider_names=["Amazon Braket"],
         statuses=["ONLINE"],
